@@ -21,7 +21,10 @@ const baseConfig = {
             use: {
                 loader: "babel-loader"
             }
-        }]
+        }, {
+            test: /\.(glsl|frag|vert)$/,
+            use: ['glslify-import-loader', 'raw-loader', 'glslify-loader']
+        }, ]
     },
     plugins: [
         new HtmlWebpackPlugin({
