@@ -36,40 +36,38 @@ const getParticleData = (img, threshold) => {
         if (originalColors[i * 4 + 0] > threshold) numVisible++
     }
 
-    const indices = new Uint16Array(numVisible)
+    // const indices = new Uint16Array(numVisible)
     const offsets = new Float32Array(numVisible * 3)
-    const angles = new Float32Array(numVisible)
+    // const angles = new Float32Array(numVisible)
 
     for (let i = 0, j = 0; i < numPixels; i++) {
         if (originalColors[i * 4 + 0] > threshold) {
-            numVisible++
 
             offsets[j * 3 + 0] = i % width
             offsets[j * 3 + 1] = Math.floor(i / width)
 
-            indices[j] = i
-            angles[j] = Math.random() * Math.PI
+            // indices[j] = i
+            // angles[j] = Math.random() * Math.PI
 
             j++
         }
     }
 
     return {
-        indices,
-        offsets,
-        angles,
+        // indices,
+        offsets
+        // angles,
     }
 }
 
 ready(() => {
     ;[...document.images].forEach((img) => {
         const threshold = 34
-        const { indices, offsets, angles } = getParticleData(img, threshold)
+        const { offsets } = getParticleData(img, threshold)
 
         // init webGL
         const scene = new THREE.Scene()
         const group = new THREE.Group()
-        group.position.set(-160, -90, 0)
         scene.add(group)
         const camera = new THREE.PerspectiveCamera(
             50,
@@ -78,12 +76,14 @@ ready(() => {
             10000
         )
         camera.position.z = 300
+        const fovHeight =
+            2 * Math.tan(camera.fov * Math.PI / 180 / 2) * camera.position.z
         const renderer = new THREE.WebGLRenderer({
             canvas: document.getElementById('canvas'),
             antialias: true,
             alpha: true,
         })
-        // renderer.setClearColor(0x000000, 1)
+        renderer.setClearColor(0x000000, 1)
 
         // const textureLoader = new THREE.TextureLoader()
         // const map = textureLoader.load('./assets/images/circle.png')
@@ -93,16 +93,20 @@ ready(() => {
         //     fog: true,
         // })
 
-        // const material = new THREE.RawShaderMaterial( {
-        //     uniforms: {
-        //         map: { value: new THREE.TextureLoader().load( './assets/images/circle.png' ) },
-        //         time: { value: 0.0 }
-        //     },
-        //     vertexShader: glslify(require('./assets/shaders/particle.vert')),
-        //     fragmentShader: glslify(require('./assets/shaders/particle.frag')),
-        //     depthTest: true,
-        //     depthWrite: true
-        // });
+        const material = new THREE.RawShaderMaterial({
+            uniforms: {
+                map: {
+                    value: new THREE.TextureLoader().load(
+                        './assets/images/circle.png'
+                    ),
+                },
+                time: { value: 0.0 },
+            },
+            vertexShader: glslify(require('./assets/shaders/particle.vert')),
+            fragmentShader: glslify(require('./assets/shaders/particle.frag')),
+            depthTest: true,
+            depthWrite: true,
+        })
 
         const positions = offsets
         for (let index = 0; index < positions.length; index += 2) {
@@ -142,6 +146,14 @@ ready(() => {
             render()
         }
         function render() {
+            const scale = fovHeight / 180
+            group.scale.set(scale, scale, 1)
+            group.position.set(-160 * scale, -90 * scale, 0)
+
+            const time = performance.now() * 0.0005;
+			material.uniforms.time.value = time;
+
+            renderer.setSize(window.innerWidth, window.innerHeight)
             renderer.render(scene, camera)
         }
         animate()
