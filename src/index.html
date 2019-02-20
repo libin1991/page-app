@@ -1,13 +1,46 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-</head>
-<body>
-    <img src="./assets/images/sample-01.png" alt="boy" />
+    <style>
+        * {
+            margin: 0 0;
+            padding: 0 0;
+        }
 
-    <canvas width="600" height="400" id="canvas"></canvas>
+        #middle {
+            background: red;
+            margin-left: -100px;
+            padding-left: 300px; 
+            float: left;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        #left {
+            background: yellow;
+            float: left;
+            width: 100px;
+        }
+        #right {
+            background: green;
+            margin-left: -100%;
+            float: left;
+            width: 200px;
+        }
+
+
+    </style>
+</head>
+
+<body>
+    <div id="parent">
+        <div id="middle">中列定宽</div>
+        <div id="left">左列定宽</div>
+        <div id="right">右列定宽</div>
+    </div>
 </body>
+
 </html>

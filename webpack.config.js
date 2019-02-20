@@ -1,40 +1,51 @@
-const path = require('path');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
-const OptimizeCSSAssetsPlugin = require("optimize-css-assets-webpack-plugin");
-const CleanWebpackPlugin = require('clean-webpack-plugin');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
+const path = require('path')
+const webpack = require('webpack')
+const HappyPack = require('happypack')
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin')
+const OptimizeCSSAssetsPlugin = require('optimize-css-assets-webpack-plugin')
+const CleanWebpackPlugin = require('clean-webpack-plugin')
+const CopyWebpackPlugin = require('copy-webpack-plugin')
 
 const baseConfig = {
     entry: {
-        main: './src/index.js'
+        main: './src/index.js',
     },
     output: {
         filename: './js/[name].js',
-        path: path.resolve(__dirname, 'dist')
+        path: path.resolve(__dirname, 'dist'),
+    },
+    stats: {
+        children: false
     },
     module: {
         rules: [{
-            test: /\.js$/,
+            test: /\.js/,
+            use: 'happypack/loader?id=babel',
+            include: path.resolve('./src'),
             exclude: /node_modules/,
-            use: {
-                loader: "babel-loader"
-            }
-        }]
+        }, ],
     },
     plugins: [
+        new HappyPack({
+            id: 'babel',
+            threads: 4,
+            loaders: ['babel-loader'],
+        }),
         new HtmlWebpackPlugin({
             title: 'page app',
+            filename: 'index.html',
             template: './src/index.html',
+            minify: true,
             inject: 'body'
         }),
         new CopyWebpackPlugin([{
             from: './src/assets/',
-            to: './assets/'
-        }])
-    ]
-};
+            to: './assets/',
+        }, ]),
+    ],
+}
 
 module.exports = (env, argv) => {
     let {
@@ -47,18 +58,17 @@ module.exports = (env, argv) => {
     // dev config
     if (argv.mode === 'development') {
         config = {
-
             devtool: 'cheap-module-eval-source-map',
 
             devServer: {
                 contentBase: path.resolve(__dirname, './dist'),
-                host: 'localhost',
+                host: '0.0.0.0',
                 port: 8080,
                 open: true,
                 // inline: true,
                 // proxy: default proxy url
                 // quiet: true
-                clientLogLevel: "none",
+                clientLogLevel: 'none',
             },
 
             module: {
@@ -66,14 +76,12 @@ module.exports = (env, argv) => {
                     ...rules,
                     {
                         test: /\.css$/,
-                        use: ['style-loader', 'css-loader']
-                    }
-                ]
+                        use: ['style-loader', 'css-loader'],
+                    },
+                ],
             },
 
-            plugins: [
-                ...plugins
-            ]
+            plugins: [...plugins],
         }
     } else if (argv.mode === 'production') {
         // production config
@@ -82,37 +90,33 @@ module.exports = (env, argv) => {
 
             module: {
                 rules: [{
-                        test: /\.css$/,
-                        use: [{
-                                loader: MiniCssExtractPlugin.loader,
-                            },
-                            "css-loader"
-                        ]
-                    },
-                    {
-                        test: /\.js$/,
-                        exclude: /node_modules/,
-                        use: {
-                            loader: "babel-loader"
-                        }
-                    }
-                ]
+                    test: /\.css$/,
+                    use: [{
+                            loader: MiniCssExtractPlugin.loader,
+                        },
+                        'css-loader',
+                    ],
+                }],
             },
 
             plugins: [
-                new CleanWebpackPlugin(["dist"], {
-                    root: __dirname
+                new CleanWebpackPlugin(['dist'], {
+                    root: __dirname,
                 }),
                 ...plugins,
                 new MiniCssExtractPlugin({
-                    filename: "/css/[name].css",
-                    chunkFilename: "/css/[id].css"
-                })
+                    filename: '/css/[name].css',
+                    chunkFilename: '/css/[id].css',
+                }),
+                new webpack.DefinePlugin({
+                    'process.env': {
+                        NODE_ENV: JSON.stringify('production'),
+                    },
+                }),
             ],
-
             optimization: {
                 splitChunks: {
-                    chunks: "all",
+                    chunks: 'all',
                     minSize: 30000,
                     minChunks: 1,
                     maxAsyncRequests: 5,
@@ -120,30 +124,34 @@ module.exports = (env, argv) => {
                     automaticNameDelimiter: '.',
                     name: true,
                     cacheGroups: {
+                        jquery: {
+                            test: module => /jquery/.test(module.context),
+                            priority: 0,
+                        },
                         vendors: {
                             test: /[\\/]node_modules[\\/]/,
-                            priority: -10
+                            priority: -10,
                         },
                         default: {
                             minChunks: 2,
                             priority: -20,
-                            reuseExistingChunk: true
-                        }
-                    }
+                            reuseExistingChunk: true,
+                        },
+                    },
                 },
                 minimizer: [
                     new UglifyJsPlugin({
                         cache: true,
                         parallel: true,
-                        sourceMap: true // set to true if you want JS source maps
+                        sourceMap: true, // set to true if you want JS source maps
                     }),
-                    new OptimizeCSSAssetsPlugin({})
-                ]
+                    new OptimizeCSSAssetsPlugin({}),
+                ],
             },
         }
     }
 
-    config = Object.assign({}, baseConfig, config);
+    config = Object.assign({}, baseConfig, config)
 
-    return config;
-};
+    return config
+}

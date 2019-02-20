@@ -1,134 +1,77 @@
 // import 'expose-loader?$!jquery';
-import 'expose-loader?THREE!three';
-import ready from 'domready';
-import glslify from 'glslify';
-import 'reset-css';
-import './css/index.css'
+// // import 'expose-loader?THREE!three';
 
-const getImgData = img => {
-    const {
-        width,
-        height
-    } = img;
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const numPixels = width * height;
-    const positionPixels = [];
+const { EventEmitter } = require('events')
 
-    canvas.width = width;
-    canvas.height = height;
-    ctx.scale(1, -1);
-    ctx.drawImage(img, 0, 0, width, height * -1);
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    return {
-        width,
-        numPixels,
-        originalColors: Float32Array.from(imgData.data)
-    };
-};
+class CustomPromise extends EventEmitter {
+    constructor(executor) {
+        super()
 
-const getParticleData = (img, threshold) => {
-    const {
-        width,
-        numPixels,
-        originalColors
-    } = getImgData(img);
+        const resolve = (value) => this.emit('resolve', value)
+        const reject = (reason) => this.emit('reject', reason)
 
-    let numVisible = 0;
-
-    for (let i = 0; i < numPixels; i++) {
-        if (originalColors[i * 4 + 0] > threshold) numVisible++;
+        executor && executor(resolve, reject)
     }
 
-    const indices = new Uint16Array(numVisible);
-    const offsets = new Float32Array(numVisible * 3);
-    const angles = new Float32Array(numVisible);
+    then(resolveHandler, rejectHandler) {
+        const promise = new CustomPromise()
 
-    for (let i = 0, j = 0; i < numPixels; i++) {
-        if (originalColors[i * 4 + 0] > threshold) {
-            numVisible++;
-
-            offsets[j * 3 + 0] = i % width;
-            offsets[j * 3 + 1] = Math.floor(i / width);
-
-            indices[j] = i;
-            angles[j] = Math.random() * Math.PI;
-
-            j++;
+        if (resolveHandler) {
+            this.on('resolve', (value) => {
+                const result = resolveHandler(value)
+                promise.emit('resolve', result)
+            })
         }
+
+        if (rejectHandler) {
+            this.on('reject', (reason) => {
+                const result = rejectHandler(result)
+                promise.emit('reject', reason)
+            })
+        } else {
+            this.on('reject', (reason) => promise.emit('reject', reason))
+        }
+
+        return promise
     }
 
-    return {
-        indices,
-        offsets,
-        angles
+    catch(handler) {
+        this.on('reject', handler)
     }
 }
 
-ready(() => {
-    [...document.images].forEach(img => {
-        const threshold = 34;
-        const {
-            indices,
-            offsets,
-            angles
-        } = getParticleData(img, threshold);
-
-        // init webGL
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 10000);
-        camera.position.z = 300;
-        const renderer = new THREE.WebGLRenderer({
-            canvas: document.getElementById('canvas'),
-            antialias: true,
-            alpha: true
+CustomPromise.all = function(promises) {
+    return new CustomPromise(function (resolve, reject) {
+        const result = []
+        const handler = i => item => {
+            result[i] = item
+            result.filter(item => !!item).length === promises.length && (resolve(result))
+        }
+    
+        promises.forEach((element, i) => {
+            element.then(handler(i))
         });
-        const clock = new THREE.Clock(true);
+    })
+}
 
-        const loader = new THREE.TextureLoader();
+const promise1 = new CustomPromise(function(resolve, reject) {
+    setTimeout(function() {
+        resolve(1)
+    }, 1000)
+})
 
-        loader.load('./assets/images/sample-01.png', texture => {
-            const {
-                image: {
-                    width,
-                    height
-                }
-            } = texture;
+const promise2 = new CustomPromise(function(resolve, reject) {
+    setTimeout(function() {
+        resolve(2)
+    }, 3000)
+})
 
-            const uniforms = {
-                uTime: {
-                    value: 0
-                },
-                uRandom: {
-                    value: 1.0
-                },
-                uDepth: {
-                    value: 2.0
-                },
-                uSize: {
-                    value: 0.0
-                },
-                uTextureSize: {
-                    value: new THREE.Vector2(width, height)
-                },
-                uTexture: {
-                    value: texture
-                },
-                uTouch: {
-                    value: null
-                },
-            };
+const promise3 = new CustomPromise(function(resolve, reject) {
+    setTimeout(function() {
+        resolve(3)
+    }, 1000)
+})
 
-            const material = new THREE.RawShaderMaterial({
-                uniforms,
-                vertexShader: glslify(require('./assets/shaders/particle.vert')),
-                fragmentShader: glslify(require('./assets/shaders/particle.frag')),
-                depthTest: false,
-                transparent: true
-                // blending: THREE.AdditiveBlending
-            });
-
-
-        })
-    });
-});
+CustomPromise.all([promise1, promise2, promise3]).then(result => {
+    console.log('result', result)
+})
