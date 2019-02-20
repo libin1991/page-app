@@ -34,9 +34,14 @@ const baseConfig = {
             loaders: ['babel-loader'],
         }),
         new HtmlWebpackPlugin({
-            title: 'page app',
             filename: 'index.html',
             template: './src/index.html',
+            minify: true,
+            inject: 'body'
+        }),
+        new HtmlWebpackPlugin({
+            filename: 'other.html',
+            template: './src/other.html',
             minify: true,
             inject: 'body'
         }),
@@ -62,13 +67,10 @@ module.exports = (env, argv) => {
 
             devServer: {
                 contentBase: path.resolve(__dirname, './dist'),
-                host: '0.0.0.0',
+                host: '127.0.0.1',
                 port: 8080,
                 open: true,
-                // inline: true,
-                // proxy: default proxy url
-                // quiet: true
-                clientLogLevel: 'none',
+                clientLogLevel: 'none'
             },
 
             module: {
